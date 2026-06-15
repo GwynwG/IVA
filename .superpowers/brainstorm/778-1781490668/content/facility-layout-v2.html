@@ -1,0 +1,279 @@
+<style>
+  .facility-wrap { max-width: 1180px; margin: 0 auto; }
+  .facility-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(160px, 1fr));
+    gap: 12px;
+  }
+  .room {
+    border: 2px solid #344054;
+    border-radius: 10px;
+    background: #f8fafc;
+    padding: 8px;
+    min-height: 138px;
+    box-shadow: 0 2px 7px rgba(16, 24, 40, .08);
+  }
+  .room-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 7px;
+    color: #1d2939;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .layout-tag {
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: #e8eef7;
+    font-size: 10px;
+  }
+  .devices {
+    height: 96px;
+    position: relative;
+    overflow: hidden;
+    border: 1px dashed #98a2b3;
+    border-radius: 6px;
+    background: #fff;
+  }
+  .device {
+    position: absolute;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 23px;
+    height: 17px;
+    border: 1px solid #3b82f6;
+    border-radius: 3px;
+    background: #dbeafe;
+    color: #1e3a8a;
+    font-size: 8px;
+    font-weight: 700;
+  }
+  .path {
+    position: absolute;
+    z-index: 1;
+    background: #fff7ed;
+    border: 1px dashed #f59e0b;
+  }
+  .door {
+    position: absolute;
+    z-index: 4;
+    right: 7px;
+    padding: 1px 4px;
+    border-radius: 3px;
+    background: #f59e0b;
+    color: #fff;
+    font-size: 7px;
+    font-weight: 700;
+  }
+  .entrance-bottom .door { bottom: 0; }
+  .entrance-top .door { top: 0; }
+
+  /* A: two parallel equipment rows, a horizontal operating aisle, and an access branch from the main aisle. */
+  .layout-a .horizontal-path { left: 5px; right: 27px; top: 39px; height: 18px; }
+  .layout-a .access-path { right: 7px; width: 18px; }
+  .layout-a.entrance-bottom .access-path { top: 39px; bottom: 0; }
+  .layout-a.entrance-top .access-path { top: 0; height: 57px; }
+  .layout-a .device:nth-of-type(1) { left: 5px; top: 9px; }
+  .layout-a .device:nth-of-type(2) { left: 24%; top: 9px; }
+  .layout-a .device:nth-of-type(3) { left: 43%; top: 9px; }
+  .layout-a .device:nth-of-type(4) { left: 62%; top: 9px; }
+  .layout-a .device:nth-of-type(5) { right: 29px; top: 9px; }
+  .layout-a .device:nth-of-type(6) { left: 5px; bottom: 9px; }
+  .layout-a .device:nth-of-type(7) { left: 24%; bottom: 9px; }
+  .layout-a .device:nth-of-type(8) { left: 43%; bottom: 9px; }
+  .layout-a .device:nth-of-type(9) { left: 62%; bottom: 9px; }
+  .layout-a .device:nth-of-type(10) { right: 29px; bottom: 9px; }
+  .layout-a-label {
+    position: absolute;
+    z-index: 2;
+    left: 28%;
+    top: 42px;
+    color: #b45309;
+    font-size: 7px;
+  }
+
+  /* B: four devices on each side and two devices at the far end of the operating aisle. */
+  .layout-b .central-path { left: 42%; width: 16%; top: 4px; bottom: 0; }
+  .layout-b .device:nth-of-type(1),
+  .layout-b .device:nth-of-type(2),
+  .layout-b .device:nth-of-type(3),
+  .layout-b .device:nth-of-type(4) { left: 8px; }
+  .layout-b .device:nth-of-type(5),
+  .layout-b .device:nth-of-type(6),
+  .layout-b .device:nth-of-type(7),
+  .layout-b .device:nth-of-type(8) { right: 8px; }
+  .layout-b .device:nth-of-type(1),
+  .layout-b .device:nth-of-type(5) { top: 23px; }
+  .layout-b .device:nth-of-type(2),
+  .layout-b .device:nth-of-type(6) { top: 43px; }
+  .layout-b .device:nth-of-type(3),
+  .layout-b .device:nth-of-type(7) { top: 63px; }
+  .layout-b .device:nth-of-type(4),
+  .layout-b .device:nth-of-type(8) { top: 78px; }
+  .layout-b.entrance-bottom .device:nth-of-type(9) { left: 34%; top: 3px; }
+  .layout-b.entrance-bottom .device:nth-of-type(10) { right: 34%; top: 3px; }
+  .layout-b.entrance-top .device:nth-of-type(9) { left: 34%; bottom: 3px; }
+  .layout-b.entrance-top .device:nth-of-type(10) { right: 34%; bottom: 3px; }
+  .layout-b.entrance-top .device:nth-of-type(1),
+  .layout-b.entrance-top .device:nth-of-type(5) { top: 3px; }
+  .layout-b.entrance-top .device:nth-of-type(2),
+  .layout-b.entrance-top .device:nth-of-type(6) { top: 23px; }
+  .layout-b.entrance-top .device:nth-of-type(3),
+  .layout-b.entrance-top .device:nth-of-type(7) { top: 43px; }
+  .layout-b.entrance-top .device:nth-of-type(4),
+  .layout-b.entrance-top .device:nth-of-type(8) { top: 63px; }
+  .layout-b-label {
+    position: absolute;
+    z-index: 2;
+    left: 44%;
+    top: 31px;
+    writing-mode: vertical-rl;
+    color: #b45309;
+    font-size: 7px;
+  }
+
+  /* C: all ten devices sit around the perimeter, leaving the ring and its label unobstructed. */
+  .layout-c .ring-path {
+    left: 31px;
+    right: 31px;
+    top: 22px;
+    bottom: 22px;
+    border-width: 2px;
+    border-radius: 18px;
+    background: transparent;
+  }
+  .layout-c .ring-label {
+    position: absolute;
+    z-index: 4;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    padding: 2px 5px;
+    border-radius: 4px;
+    background: #fff7ed;
+    color: #b45309;
+    font-size: 7px;
+    white-space: nowrap;
+  }
+  .layout-c .device:nth-of-type(1) { left: 6px; top: 5px; }
+  .layout-c .device:nth-of-type(2) { left: 31%; top: 5px; }
+  .layout-c .device:nth-of-type(3) { right: 31%; top: 5px; }
+  .layout-c .device:nth-of-type(4) { right: 6px; top: 5px; }
+  .layout-c .device:nth-of-type(5) { left: 6px; top: 39px; }
+  .layout-c .device:nth-of-type(6) { right: 6px; top: 39px; }
+  .layout-c .device:nth-of-type(7) { left: 6px; bottom: 5px; }
+  .layout-c .device:nth-of-type(8) { left: 31%; bottom: 5px; }
+  .layout-c .device:nth-of-type(9) { right: 31%; bottom: 5px; }
+  .layout-c .device:nth-of-type(10) { right: 6px; bottom: 5px; }
+
+  .aisle {
+    grid-column: 1 / -1;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #98a2b3;
+    border-radius: 8px;
+    background: repeating-linear-gradient(90deg, #eef2f6 0, #eef2f6 28px, #e3e8ef 28px, #e3e8ef 56px);
+    color: #475467;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 6px;
+  }
+  .legend {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 18px;
+  }
+  .legend-card {
+    padding: 12px;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    background: #fff;
+  }
+  .legend-card strong { display: block; margin-bottom: 4px; color: #1d2939; }
+  .legend-card span { color: #667085; font-size: 13px; }
+  @media (max-width: 900px) {
+    .facility-grid { grid-template-columns: repeat(5, 165px); overflow-x: auto; }
+    .legend { grid-template-columns: 1fr; }
+  }
+</style>
+
+<div class="facility-wrap">
+  <h2>20 个房间与 200 台设备整体布局草图 V2</h2>
+  <p class="subtitle">整体四排与两条主过道不变。本版重点修正三类房间的室内操作通道和设备位置。</p>
+
+  <div class="facility-grid">
+    <div class="room"><div class="room-head"><span>R01</span><span class="layout-tag">A 平行双排</span></div><div class="devices layout-a entrance-bottom"></div></div>
+    <div class="room"><div class="room-head"><span>R02</span><span class="layout-tag">B 双侧尽头</span></div><div class="devices layout-b entrance-bottom"></div></div>
+    <div class="room"><div class="room-head"><span>R03</span><span class="layout-tag">C 环形分布</span></div><div class="devices layout-c entrance-bottom"></div></div>
+    <div class="room"><div class="room-head"><span>R04</span><span class="layout-tag">A 平行双排</span></div><div class="devices layout-a entrance-bottom"></div></div>
+    <div class="room"><div class="room-head"><span>R05</span><span class="layout-tag">B 双侧尽头</span></div><div class="devices layout-b entrance-bottom"></div></div>
+
+    <div class="aisle">主过道 A</div>
+
+    <div class="room"><div class="room-head"><span>R06</span><span class="layout-tag">C 环形分布</span></div><div class="devices layout-c entrance-top"></div></div>
+    <div class="room"><div class="room-head"><span>R07</span><span class="layout-tag">A 平行双排</span></div><div class="devices layout-a entrance-top"></div></div>
+    <div class="room"><div class="room-head"><span>R08</span><span class="layout-tag">B 双侧尽头</span></div><div class="devices layout-b entrance-top"></div></div>
+    <div class="room"><div class="room-head"><span>R09</span><span class="layout-tag">C 环形分布</span></div><div class="devices layout-c entrance-top"></div></div>
+    <div class="room"><div class="room-head"><span>R10</span><span class="layout-tag">A 平行双排</span></div><div class="devices layout-a entrance-top"></div></div>
+
+    <div class="room"><div class="room-head"><span>R11</span><span class="layout-tag">B 双侧尽头</span></div><div class="devices layout-b entrance-bottom"></div></div>
+    <div class="room"><div class="room-head"><span>R12</span><span class="layout-tag">C 环形分布</span></div><div class="devices layout-c entrance-bottom"></div></div>
+    <div class="room"><div class="room-head"><span>R13</span><span class="layout-tag">A 平行双排</span></div><div class="devices layout-a entrance-bottom"></div></div>
+    <div class="room"><div class="room-head"><span>R14</span><span class="layout-tag">B 双侧尽头</span></div><div class="devices layout-b entrance-bottom"></div></div>
+    <div class="room"><div class="room-head"><span>R15</span><span class="layout-tag">C 环形分布</span></div><div class="devices layout-c entrance-bottom"></div></div>
+
+    <div class="aisle">主过道 B</div>
+
+    <div class="room"><div class="room-head"><span>R16</span><span class="layout-tag">A 平行双排</span></div><div class="devices layout-a entrance-top"></div></div>
+    <div class="room"><div class="room-head"><span>R17</span><span class="layout-tag">B 双侧尽头</span></div><div class="devices layout-b entrance-top"></div></div>
+    <div class="room"><div class="room-head"><span>R18</span><span class="layout-tag">C 环形分布</span></div><div class="devices layout-c entrance-top"></div></div>
+    <div class="room"><div class="room-head"><span>R19</span><span class="layout-tag">A 平行双排</span></div><div class="devices layout-a entrance-top"></div></div>
+    <div class="room"><div class="room-head"><span>R20</span><span class="layout-tag">B 双侧尽头</span></div><div class="devices layout-b entrance-top"></div></div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-card"><strong>A · 平行双排</strong><span>两排各 5 台；中间保留横向操作通道，并通过右侧支路连接主过道入口。</span></div>
+    <div class="legend-card"><strong>B · 双侧尽头</strong><span>左右两侧各 4 台，中央操作通道尽头横向布置 2 台设备。</span></div>
+    <div class="legend-card"><strong>C · 环形分布</strong><span>10 台设备沿房间四周布置，环形通道和标签位于中央空区，不遮挡设备编号。</span></div>
+  </div>
+
+  <div style="margin-top:18px">
+    <h3>请复核 V2</h3>
+    <div class="options">
+      <div class="option" data-choice="layout-v2-approve" onclick="toggleSelect(this)">
+        <div class="letter">A</div>
+        <div class="content"><h3>三种布局可以</h3><p>确认空间草图，继续讨论 Excel、状态判定和分析功能。</p></div>
+      </div>
+      <div class="option" data-choice="layout-v2-adjust" onclick="toggleSelect(this)">
+        <div class="letter">B</div>
+        <div class="content"><h3>还要调整</h3><p>在终端说明需要移动的设备、入口或通道。</p></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.querySelectorAll('.devices').forEach((box) => {
+    const room = box.closest('.room').querySelector('.room-head span').textContent;
+    for (let i = 1; i <= 10; i += 1) {
+      const item = document.createElement('div');
+      item.className = 'device';
+      item.textContent = `D${String(i).padStart(2, '0')}`;
+      item.title = `${room}-D${String(i).padStart(2, '0')}`;
+      box.appendChild(item);
+    }
+    if (box.classList.contains('layout-a')) {
+      box.insertAdjacentHTML('beforeend', '<div class="path horizontal-path"></div><div class="path access-path"></div><span class="layout-a-label">操作通道</span><span class="door">入口</span>');
+    } else if (box.classList.contains('layout-b')) {
+      box.insertAdjacentHTML('beforeend', '<div class="path central-path"></div><span class="layout-b-label">操作通道</span><span class="door">入口</span>');
+    } else {
+      box.insertAdjacentHTML('beforeend', '<div class="path ring-path"></div><span class="ring-label">环形通道</span><span class="door">入口</span>');
+    }
+  });
+</script>

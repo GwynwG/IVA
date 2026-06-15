@@ -1,0 +1,216 @@
+<style>
+  .facility-wrap { max-width: 1180px; margin: 0 auto; }
+  .facility-note { margin: 10px 0 18px; color: #667085; font-size: 14px; }
+  .facility-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(150px, 1fr));
+    gap: 12px;
+  }
+  .room {
+    border: 2px solid #344054;
+    border-radius: 10px;
+    background: #f8fafc;
+    padding: 8px;
+    min-height: 126px;
+    box-shadow: 0 2px 7px rgba(16, 24, 40, .08);
+  }
+  .room-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 7px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #1d2939;
+  }
+  .layout-tag {
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: #e8eef7;
+    color: #344054;
+    font-size: 10px;
+  }
+  .devices {
+    height: 86px;
+    position: relative;
+    border: 1px dashed #98a2b3;
+    border-radius: 6px;
+    background: #fff;
+    padding: 5px;
+  }
+  .device {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    min-height: 16px;
+    border-radius: 3px;
+    background: #dbeafe;
+    border: 1px solid #3b82f6;
+    color: #1e3a8a;
+    font-size: 8px;
+    font-weight: 700;
+  }
+  .layout-a {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    gap: 12px 5px;
+    align-items: center;
+  }
+  .layout-b {
+    display: grid;
+    grid-template-columns: 1fr 1.4fr 1fr;
+    grid-template-rows: repeat(5, 1fr);
+    gap: 2px 8px;
+    align-items: center;
+  }
+  .layout-b .device:nth-child(-n+5) { grid-column: 1; }
+  .layout-b .device:nth-child(6) { grid-column: 3; grid-row: 1; }
+  .layout-b .device:nth-child(7) { grid-column: 3; grid-row: 2; }
+  .layout-b .device:nth-child(8) { grid-column: 3; grid-row: 3; }
+  .layout-b .device:nth-child(9) { grid-column: 3; grid-row: 4; }
+  .layout-b .device:nth-child(10) { grid-column: 3; grid-row: 5; }
+  .layout-b::after {
+    content: "中央操作通道";
+    position: absolute;
+    left: 34%;
+    right: 34%;
+    top: 7px;
+    bottom: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    writing-mode: vertical-rl;
+    color: #98a2b3;
+    font-size: 8px;
+    border-left: 1px dashed #d0d5dd;
+    border-right: 1px dashed #d0d5dd;
+  }
+  .layout-c .device { position: absolute; width: 22px; height: 16px; }
+  .layout-c .device:nth-child(1) { left: 7px; top: 7px; }
+  .layout-c .device:nth-child(2) { left: 40%; top: 7px; }
+  .layout-c .device:nth-child(3) { right: 7px; top: 7px; }
+  .layout-c .device:nth-child(4) { left: 7px; top: 35px; }
+  .layout-c .device:nth-child(5) { right: 7px; top: 35px; }
+  .layout-c .device:nth-child(6) { left: 7px; bottom: 7px; }
+  .layout-c .device:nth-child(7) { left: 40%; bottom: 7px; }
+  .layout-c .device:nth-child(8) { right: 7px; bottom: 7px; }
+  .layout-c .device:nth-child(9) { left: 34%; top: 34px; }
+  .layout-c .device:nth-child(10) { right: 34%; top: 34px; }
+  .layout-c::after {
+    content: "环形巡检路径";
+    position: absolute;
+    inset: 26px 31px;
+    border: 1px dashed #f59e0b;
+    border-radius: 14px;
+    color: #b45309;
+    font-size: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .aisle {
+    grid-column: 1 / -1;
+    height: 50px;
+    border-radius: 8px;
+    background:
+      repeating-linear-gradient(90deg, #eef2f6 0, #eef2f6 28px, #e3e8ef 28px, #e3e8ef 56px);
+    border: 1px solid #98a2b3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #475467;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 6px;
+  }
+  .legend {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 18px;
+  }
+  .legend-card {
+    padding: 12px;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    background: #fff;
+  }
+  .legend-card strong { display: block; margin-bottom: 4px; color: #1d2939; }
+  .legend-card span { color: #667085; font-size: 13px; }
+  .review-options { margin-top: 18px; }
+  @media (max-width: 900px) {
+    .facility-grid { grid-template-columns: repeat(5, 150px); overflow-x: auto; }
+    .legend { grid-template-columns: 1fr; }
+  }
+</style>
+
+<div class="facility-wrap">
+  <h2>20 个房间与 200 台设备整体布局草图 V1</h2>
+  <p class="subtitle">从上到下共 4 排，每排 5 个房间；第 1/2 排与第 3/4 排之间各有一条横向过道。三种室内布局交错使用。</p>
+  <p class="facility-note">蓝色小块为设备。正式界面中每台设备会显示结构化 ID，并按正常、预警、事故三级状态着色。</p>
+
+  <div class="facility-grid">
+    <div class="room"><div class="room-head"><span>R01</span><span class="layout-tag">A 平行双排</span></div><div class="devices layout-a"></div></div>
+    <div class="room"><div class="room-head"><span>R02</span><span class="layout-tag">B 双侧通道</span></div><div class="devices layout-b"></div></div>
+    <div class="room"><div class="room-head"><span>R03</span><span class="layout-tag">C 环形分布</span></div><div class="devices layout-c"></div></div>
+    <div class="room"><div class="room-head"><span>R04</span><span class="layout-tag">A 平行双排</span></div><div class="devices layout-a"></div></div>
+    <div class="room"><div class="room-head"><span>R05</span><span class="layout-tag">B 双侧通道</span></div><div class="devices layout-b"></div></div>
+
+    <div class="aisle">主过道 A</div>
+
+    <div class="room"><div class="room-head"><span>R06</span><span class="layout-tag">C 环形分布</span></div><div class="devices layout-c"></div></div>
+    <div class="room"><div class="room-head"><span>R07</span><span class="layout-tag">A 平行双排</span></div><div class="devices layout-a"></div></div>
+    <div class="room"><div class="room-head"><span>R08</span><span class="layout-tag">B 双侧通道</span></div><div class="devices layout-b"></div></div>
+    <div class="room"><div class="room-head"><span>R09</span><span class="layout-tag">C 环形分布</span></div><div class="devices layout-c"></div></div>
+    <div class="room"><div class="room-head"><span>R10</span><span class="layout-tag">A 平行双排</span></div><div class="devices layout-a"></div></div>
+
+    <div class="room"><div class="room-head"><span>R11</span><span class="layout-tag">B 双侧通道</span></div><div class="devices layout-b"></div></div>
+    <div class="room"><div class="room-head"><span>R12</span><span class="layout-tag">C 环形分布</span></div><div class="devices layout-c"></div></div>
+    <div class="room"><div class="room-head"><span>R13</span><span class="layout-tag">A 平行双排</span></div><div class="devices layout-a"></div></div>
+    <div class="room"><div class="room-head"><span>R14</span><span class="layout-tag">B 双侧通道</span></div><div class="devices layout-b"></div></div>
+    <div class="room"><div class="room-head"><span>R15</span><span class="layout-tag">C 环形分布</span></div><div class="devices layout-c"></div></div>
+
+    <div class="aisle">主过道 B</div>
+
+    <div class="room"><div class="room-head"><span>R16</span><span class="layout-tag">A 平行双排</span></div><div class="devices layout-a"></div></div>
+    <div class="room"><div class="room-head"><span>R17</span><span class="layout-tag">B 双侧通道</span></div><div class="devices layout-b"></div></div>
+    <div class="room"><div class="room-head"><span>R18</span><span class="layout-tag">C 环形分布</span></div><div class="devices layout-c"></div></div>
+    <div class="room"><div class="room-head"><span>R19</span><span class="layout-tag">A 平行双排</span></div><div class="devices layout-a"></div></div>
+    <div class="room"><div class="room-head"><span>R20</span><span class="layout-tag">B 双侧通道</span></div><div class="devices layout-b"></div></div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-card"><strong>A · 平行双排</strong><span>2 排 × 5 台，适合规则、紧凑的标准设备间，中部保留横向操作空间。</span></div>
+    <div class="legend-card"><strong>B · 双侧通道</strong><span>左右各 5 台，中间形成纵向操作通道，适合巡检频繁或设备较长的房间。</span></div>
+    <div class="legend-card"><strong>C · 环形分布</strong><span>8 台靠近四周、2 台位于中心，形成环形巡检路径，适合需要多方向接近的设备。</span></div>
+  </div>
+
+  <div class="review-options">
+    <h3>你对 V1 草图的判断</h3>
+    <div class="options">
+      <div class="option" data-choice="layout-approve" onclick="toggleSelect(this)">
+        <div class="letter">A</div>
+        <div class="content"><h3>整体结构可以</h3><p>保留四排、两条过道和三种室内布局，继续细化。</p></div>
+      </div>
+      <div class="option" data-choice="layout-adjust" onclick="toggleSelect(this)">
+        <div class="letter">B</div>
+        <div class="content"><h3>需要调整</h3><p>在终端说明房间、过道或设备摆放需要怎样修改。</p></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.querySelectorAll('.layout-a, .layout-b, .layout-c').forEach((box) => {
+    const room = box.closest('.room').querySelector('.room-head span').textContent;
+    for (let i = 1; i <= 10; i += 1) {
+      const item = document.createElement('div');
+      item.className = 'device';
+      item.textContent = `D${String(i).padStart(2, '0')}`;
+      item.title = `${room}-D${String(i).padStart(2, '0')}`;
+      box.appendChild(item);
+    }
+  });
+</script>
