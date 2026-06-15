@@ -1,0 +1,38 @@
+<style>
+  .wrap { max-width: 1080px; margin: 0 auto; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:20px; }
+  .card { padding:16px; border:1px solid #d0d5dd; border-radius:10px; background:#fff; }
+  .card h3 { margin:0 0 10px; color:#1d2939; }
+  .item { display:grid; grid-template-columns:26px 1fr; gap:8px; margin:10px 0; }
+  .badge { width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:#dbeafe; color:#1d4ed8; font-size:11px; font-weight:700; }
+  .item strong { display:block; font-size:13px; }
+  .item span { color:#667085; font-size:12px; line-height:1.5; }
+  .guard { margin-top:14px; padding:14px; border-radius:9px; background:#fffbeb; border:1px solid #fcd34d; }
+  .guard strong { display:block; margin-bottom:5px; }
+  .guard span { color:#475467; font-size:13px; }
+  @media(max-width:800px){.grid{grid-template-columns:1fr}}
+</style>
+<div class="wrap">
+  <h2>智能分析与简单预测设计</h2>
+  <p class="subtitle">第一版优先采用可解释规则和稳健统计方法，适应不同采样频率与有限历史数据。</p>
+  <div class="grid">
+    <div class="card">
+      <h3>智能分析</h3>
+      <div class="item"><div class="badge">1</div><div><strong>异常事件</strong><span>按设备和监测类型合并连续预警/事故记录，计算开始、结束、峰值与持续时间。</span></div></div>
+      <div class="item"><div class="badge">2</div><div><strong>快速增长</strong><span>比较近期斜率与历史波动范围，标出短期显著上升记录。</span></div></div>
+      <div class="item"><div class="badge">3</div><div><strong>接近阈值</strong><span>根据监测值占预警值比例和近期趋势，提示尚未越线但风险增加的设备。</span></div></div>
+      <div class="item"><div class="badge">4</div><div><strong>风险排名</strong><span>综合状态严重度、越线幅度、持续时间、上升趋势和重复发生频率。</span></div></div>
+    </div>
+    <div class="card">
+      <h3>简单预测</h3>
+      <div class="item"><div class="badge">1</div><div><strong>设备监测值</strong><span>规则采样优先使用线性趋势与指数平滑；不规则采样按真实时间间隔拟合。</span></div></div>
+      <div class="item"><div class="badge">2</div><div><strong>越线风险</strong><span>将预测值与对应预警值、控制标准比较，输出预计状态与距离阈值。</span></div></div>
+      <div class="item"><div class="badge">3</div><div><strong>整体风险数量</strong><span>对各设备预测结果聚合，得到下一条以及未来 1/7/30 天预警和事故设备数。</span></div></div>
+      <div class="item"><div class="badge">4</div><div><strong>回退策略</strong><span>历史不足时使用最近值或移动平均，并明确标注低可信度。</span></div></div>
+    </div>
+  </div>
+  <div class="guard">
+    <strong>解释与可信度约束</strong>
+    <span>所有预测都显示历史样本数、使用方法、预测时间、可信度等级及“仅供趋势研判，不替代法定监测与事故处置”的提示。</span>
+  </div>
+</div>

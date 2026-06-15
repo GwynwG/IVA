@@ -1,0 +1,42 @@
+<style>
+  .wrap { max-width: 1080px; margin:0 auto; }
+  .cols { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:20px; }
+  .card { padding:16px; border:1px solid #d0d5dd; border-radius:10px; background:#fff; }
+  .card h3 { margin:0 0 10px; }
+  .sheet { display:flex; justify-content:space-between; padding:7px 9px; margin:5px 0; border-radius:6px; background:#f8fafc; color:#475467; font-size:12px; }
+  .sheet span:last-child { color:#2563eb; }
+  .checks { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:14px; }
+  .check { padding:12px; border:1px solid #d0d5dd; border-radius:8px; background:#fff; }
+  .check strong { display:block; margin-bottom:5px; font-size:13px; }
+  .check span { color:#667085; font-size:12px; line-height:1.45; }
+  @media(max-width:850px){.cols{grid-template-columns:1fr}.checks{grid-template-columns:repeat(2,1fr)}}
+</style>
+<div class="wrap">
+  <h2>Excel 生成、分析报告与验收</h2>
+  <div class="cols">
+    <div class="card">
+      <h3>报告生成器</h3>
+      <div class="sheet"><span>空白录入模板</span><span>200 设备预填</span></div>
+      <div class="sheet"><span>模拟历史数据</span><span>时间/频率可配</span></div>
+      <div class="sheet"><span>动态监测类型</span><span>名称/单位/阈值可配</span></div>
+      <div class="sheet"><span>异常场景</span><span>预警/事故/快速上升</span></div>
+      <div class="sheet"><span>生成规模</span><span>单总表或多日表</span></div>
+    </div>
+    <div class="card">
+      <h3>多工作表分析报告</h3>
+      <div class="sheet"><span>分析摘要</span><span>总体状态与覆盖率</span></div>
+      <div class="sheet"><span>异常事件</span><span>持续时间与峰值</span></div>
+      <div class="sheet"><span>设备风险排名</span><span>评分与原因</span></div>
+      <div class="sheet"><span>房间风险排名</span><span>房间聚合结果</span></div>
+      <div class="sheet"><span>趋势预测</span><span>方法与可信度</span></div>
+      <div class="sheet"><span>清洗后的监测数据</span><span>标准化明细</span></div>
+      <div class="sheet"><span>数据质量问题</span><span>错误/警告/冲突</span></div>
+    </div>
+  </div>
+  <div class="checks">
+    <div class="check"><strong>单元测试</strong><span>ID、阈值边界、去重冲突、事件合并、风险评分与预测回退。</span></div>
+    <div class="check"><strong>Excel 测试</strong><span>日期与日期时间、缺列、坏数据、单位冲突、总表及多文件合并。</span></div>
+    <div class="check"><strong>界面测试</strong><span>200 设备状态、筛选联动、点击详情、趋势图与导出按钮。</span></div>
+    <div class="check"><strong>端到端验收</strong><span>生成模拟数据、上传分析、核对状态、预测并导出多工作表报告。</span></div>
+  </div>
+</div>

@@ -1,0 +1,81 @@
+<style>
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  .pipeline {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 8px;
+    margin: 24px 0;
+  }
+  .step {
+    position: relative;
+    min-height: 126px;
+    padding: 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 9px;
+    background: #fff;
+  }
+  .step:not(:last-child)::after {
+    content: "→";
+    position: absolute;
+    top: 45%;
+    right: -13px;
+    z-index: 3;
+    color: #3b82f6;
+    font-size: 20px;
+    font-weight: 700;
+  }
+  .num {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: #2563eb;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .step h3 { margin: 9px 0 5px; font-size: 14px; }
+  .step p { margin: 0; color: #667085; font-size: 12px; line-height: 1.5; }
+  .quality {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  .q {
+    padding: 14px;
+    border-radius: 9px;
+    border: 1px solid #d0d5dd;
+  }
+  .q.error { background:#fff1f2; border-color:#fda4af; }
+  .q.warn { background:#fffbeb; border-color:#fcd34d; }
+  .q.info { background:#eff6ff; border-color:#93c5fd; }
+  .q strong { display:block; margin-bottom:6px; }
+  .q span { color:#475467; font-size:13px; }
+  @media (max-width: 900px) {
+    .pipeline { grid-template-columns: repeat(2, 1fr); }
+    .step::after { display:none; }
+    .quality { grid-template-columns: 1fr; }
+  }
+</style>
+
+<div class="wrap">
+  <h2>数据导入、合并与校验流程</h2>
+  <p class="subtitle">所有分析都基于标准化后的统一记录集；原始文件和冲突审计信息保留，不静默丢弃。</p>
+
+  <div class="pipeline">
+    <div class="step"><div class="num">1</div><h3>上传</h3><p>单个长期总表，或多份日表/阶段表。</p></div>
+    <div class="step"><div class="num">2</div><h3>字段映射</h3><p>识别必填列、可选列和日期/日期时间精度。</p></div>
+    <div class="step"><div class="num">3</div><h3>业务校验</h3><p>检查 R01-R20、设备归属、数值、单位和阈值关系。</p></div>
+    <div class="step"><div class="num">4</div><h3>合并去重</h3><p>完全重复自动去除；主键冲突保留审计记录。</p></div>
+    <div class="step"><div class="num">5</div><h3>状态计算</h3><p>逐监测类型判定，并按最严重状态汇总到设备和房间。</p></div>
+    <div class="step"><div class="num">6</div><h3>分析与导出</h3><p>布局、趋势、事件、排名、预测和多表报告。</p></div>
+  </div>
+
+  <div class="quality">
+    <div class="q error"><strong>阻断错误</strong><span>缺少必填列、监测值无法解析、预警值高于控制标准、设备 ID 不合法。错误行不参与分析。</span></div>
+    <div class="q warn"><strong>可继续警告</strong><span>名称缺失、日期只有天级精度、同一主键存在冲突、单位不一致。采用明确规则继续并提示。</span></div>
+    <div class="q info"><strong>质量信息</strong><span>文件数、原始行数、有效行数、去重数、冲突数、覆盖时间范围和设备覆盖率。</span></div>
+  </div>
+</div>

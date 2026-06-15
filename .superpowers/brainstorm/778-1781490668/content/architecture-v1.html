@@ -1,0 +1,92 @@
+<style>
+  .arch { max-width: 1050px; margin: 0 auto; }
+  .flow {
+    display: grid;
+    grid-template-columns: 1fr 55px 1.15fr 55px 1fr;
+    align-items: center;
+    gap: 10px;
+    margin-top: 24px;
+  }
+  .box {
+    min-height: 150px;
+    padding: 16px;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, .06);
+  }
+  .box.core { border-color: #3b82f6; background: #eff6ff; }
+  .box h3 { margin: 0 0 10px; }
+  .box ul { margin: 0; padding-left: 18px; color: #475467; font-size: 13px; line-height: 1.7; }
+  .arrow { text-align: center; color: #3b82f6; font-size: 28px; font-weight: 700; }
+  .modules {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-top: 16px;
+  }
+  .module {
+    padding: 12px;
+    border-radius: 8px;
+    background: #f8fafc;
+    border: 1px solid #d0d5dd;
+    text-align: center;
+  }
+  .module strong { display:block; margin-bottom:4px; color:#1d2939; }
+  .module span { font-size:12px; color:#667085; }
+  @media (max-width: 850px) {
+    .flow { grid-template-columns: 1fr; }
+    .arrow { transform: rotate(90deg); }
+    .modules { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+
+<div class="arch">
+  <h2>方案 B：分层重构架构</h2>
+  <p class="subtitle">保留 Streamlit 交互与既有视觉基调，业务逻辑从大型单文件中拆出，页面只消费稳定的数据结果。</p>
+
+  <div class="flow">
+    <div class="box">
+      <h3>输入与生成</h3>
+      <ul>
+        <li>单个长期 Excel</li>
+        <li>多份日表/阶段表</li>
+        <li>空白录入模板</li>
+        <li>模拟历史数据生成器</li>
+      </ul>
+    </div>
+    <div class="arrow">→</div>
+    <div class="box core">
+      <h3>统一监测数据内核</h3>
+      <ul>
+        <li>字段校验与格式归一化</li>
+        <li>设备 ID、房间 ID 校验</li>
+        <li>去重、冲突和质量问题记录</li>
+        <li>三级状态判定与设备状态汇总</li>
+        <li>趋势、风险、事件和预测计算</li>
+      </ul>
+    </div>
+    <div class="arrow">→</div>
+    <div class="box">
+      <h3>展示与输出</h3>
+      <ul>
+        <li>V5 房间设备布局图</li>
+        <li>趋势和阈值线</li>
+        <li>风险排名与异常事件</li>
+        <li>下一条及 1/7/30 天预测</li>
+        <li>多工作表分析报告</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="modules">
+    <div class="module"><strong>models</strong><span>房间、设备、监测记录</span></div>
+    <div class="module"><strong>excel_io</strong><span>读取、校验、模板和导出</span></div>
+    <div class="module"><strong>status</strong><span>正常、预警、事故判定</span></div>
+    <div class="module"><strong>layout</strong><span>20 房间与三类设备坐标</span></div>
+    <div class="module"><strong>analytics</strong><span>趋势、排名、事件、接近阈值</span></div>
+    <div class="module"><strong>forecast</strong><span>设备数值与全局风险预测</span></div>
+    <div class="module"><strong>reporting</strong><span>多工作表分析报告</span></div>
+    <div class="module"><strong>ui</strong><span>Streamlit 页面与交互状态</span></div>
+  </div>
+</div>
