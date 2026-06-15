@@ -16,6 +16,7 @@ Create:
 
 ```text
 pytest.ini
+pyproject.toml
 src/irradiation_analysis/__init__.py
 src/irradiation_analysis/models.py
 src/irradiation_analysis/validation.py
