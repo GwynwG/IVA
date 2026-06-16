@@ -28,6 +28,8 @@ _HORIZON_DAYS = {
     ForecastHorizon.DAYS_7: 7,
     ForecastHorizon.DAYS_30: 30,
 }
+HOLDOUT_MAX_POINTS = 30
+NEXT_RECORD_FALLBACK_INTERVAL = timedelta(days=1)
 
 _CANDIDATES: tuple[tuple[str, Predictor], ...] = (
     ("最近值", lambda records, target_elapsed: _predict_last_value(records, target_elapsed)),
@@ -50,6 +52,7 @@ def forecast_series(
     series_records = sorted(records, key=_record_order)
     if not series_records:
         raise ValueError("forecast_series requires at least one record")
+    _validate_finite_values(series_records)
 
     latest = series_records[-1]
     predicted_at = _predicted_at(series_records, horizon)
@@ -73,7 +76,10 @@ def forecast_series(
             confidence = _confidence(winner.mean_absolute_error, series_records)
             explanation = _candidate_explanation(series_records, winner)
 
-    predicted_value = round(float(predicted_value), 6)
+    predicted_value = float(predicted_value)
+    if not isfinite(predicted_value):
+        raise ValueError("forecast predicted value must be finite")
+    predicted_value = round(predicted_value, 6)
     predicted_status = _classify_forecast_value(latest, predicted_at, predicted_value)
 
     return SeriesForecast(
@@ -215,7 +221,8 @@ def _chronological_holdout_error(
     records: list[MonitoringRecord], predictor: Predictor
 ) -> float | None:
     errors: list[float] = []
-    for index in range(2, len(records)):
+    start_index = max(2, len(records) - HOLDOUT_MAX_POINTS)
+    for index in range(start_index, len(records)):
         training_records = records[:index]
         target = records[index]
         target_elapsed = _elapsed_days(
@@ -273,12 +280,11 @@ def _predicted_at(
 ) -> datetime:
     latest = records[-1]
     if horizon is ForecastHorizon.NEXT_RECORD:
-        if len(records) < 2:
-            return latest.monitored_at
-        interval = latest.monitored_at - records[-2].monitored_at
-        if interval.total_seconds() <= 0:
-            return latest.monitored_at
-        return latest.monitored_at + interval
+        for prior in reversed(records[:-1]):
+            interval = latest.monitored_at - prior.monitored_at
+            if interval.total_seconds() > 0:
+                return latest.monitored_at + interval
+        return latest.monitored_at + NEXT_RECORD_FALLBACK_INTERVAL
 
     return latest.monitored_at + timedelta(days=_HORIZON_DAYS[horizon])
 
@@ -327,6 +333,12 @@ def _candidate_order(method: str) -> int:
         "指数平滑": 2,
         "移动平均": 3,
     }[method]
+
+
+def _validate_finite_values(records: list[MonitoringRecord]) -> None:
+    for record in records:
+        if not isfinite(float(record.value)):
+            raise ValueError("forecast record values must be finite")
 
 
 def _record_order(record: MonitoringRecord) -> tuple[datetime, int, str, str, int]:
