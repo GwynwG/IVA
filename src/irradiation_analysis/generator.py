@@ -4,11 +4,13 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from io import BytesIO
 from math import ceil, isfinite
+from numbers import Real
 import re
 from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
 import numpy as np
 from openpyxl import Workbook
+from openpyxl.cell import WriteOnlyCell
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.worksheet import Worksheet
@@ -103,11 +105,16 @@ def generate_simulated_workbooks(config: SimulationConfig) -> list[UploadedWorkb
     rng = np.random.default_rng(config.seed)
     times = _sampling_times(config)
     device_ids = all_device_ids()
-    workbook, worksheet = _new_monitoring_workbook(config.monitor_types)
     scenarios = _scenario_assignments(
         series_count=len(device_ids) * len(config.monitor_types),
         config=config,
         rng=rng,
+    )
+    data_row_count = len(times) * len(config.monitor_types) * len(device_ids)
+    workbook, worksheet = _new_monitoring_workbook(
+        config.monitor_types,
+        write_only=True,
+        data_row_count=data_row_count,
     )
 
     for time_index, monitored_at in enumerate(times):
@@ -131,9 +138,7 @@ def generate_simulated_workbooks(config: SimulationConfig) -> list[UploadedWorkb
                         data_source="simulated",
                     )
                 )
-                _apply_row_formats(worksheet, worksheet.max_row)
 
-    _finalize_data_sheet(worksheet)
     filename = (
         f"simulated_monitoring_{config.start:%Y%m%d}_{config.end:%Y%m%d}.xlsx"
     )
@@ -146,29 +151,52 @@ def _headers() -> tuple[str, ...]:
 
 def _new_monitoring_workbook(
     monitor_types: tuple[MonitorTypeConfig, ...],
+    *,
+    write_only: bool = False,
+    data_row_count: int | None = None,
 ) -> tuple[Workbook, Worksheet]:
-    workbook = Workbook()
-    worksheet = workbook.active
-    worksheet.title = DATA_SHEET_NAME
+    workbook = Workbook(write_only=write_only)
+    if write_only:
+        worksheet = workbook.create_sheet(DATA_SHEET_NAME)
+        _finalize_data_sheet(worksheet, row_count=(data_row_count or 0) + 1)
+    else:
+        worksheet = workbook.active
+        worksheet.title = DATA_SHEET_NAME
     _write_headers(worksheet, _headers())
-    _add_threshold_sheet(workbook, monitor_types)
+    _add_threshold_sheet(workbook, monitor_types, write_only=write_only)
     return workbook, worksheet
 
 
 def _write_headers(worksheet: Worksheet, headers: tuple[str, ...]) -> None:
     fill = PatternFill(fill_type="solid", fgColor="D9EAF7")
+    font = Font(bold=True)
+    alignment = Alignment(horizontal="center", vertical="center")
+    if not hasattr(worksheet, "cell"):
+        row = []
+        for header in headers:
+            cell = WriteOnlyCell(worksheet, value=header)
+            cell.font = font
+            cell.fill = fill
+            cell.alignment = alignment
+            row.append(cell)
+        worksheet.append(row)
+        return
+
     for column, header in enumerate(headers, start=1):
         cell = worksheet.cell(row=1, column=column, value=header)
-        cell.font = Font(bold=True)
+        cell.font = font
         cell.fill = fill
-        cell.alignment = Alignment(horizontal="center", vertical="center")
+        cell.alignment = alignment
 
 
 def _add_threshold_sheet(
     workbook: Workbook,
     monitor_types: tuple[MonitorTypeConfig, ...],
+    *,
+    write_only: bool = False,
 ) -> None:
     worksheet = workbook.create_sheet(THRESHOLD_SHEET_NAME)
+    _finalize_threshold_sheet(worksheet, row_count=len(monitor_types) + 1)
     headers = ("监测类型", "单位", "预警值", "控制标准")
     _write_headers(worksheet, headers)
     for monitor_type in monitor_types:
@@ -180,20 +208,31 @@ def _add_threshold_sheet(
                 monitor_type.control_threshold,
             ]
         )
-        worksheet.cell(row=worksheet.max_row, column=3).number_format = NUMBER_FORMAT
-        worksheet.cell(row=worksheet.max_row, column=4).number_format = NUMBER_FORMAT
-    worksheet.freeze_panes = "A2"
-    worksheet.auto_filter.ref = worksheet.dimensions
-    for column, width in enumerate((16, 12, 12, 12), start=1):
-        worksheet.column_dimensions[get_column_letter(column)].width = width
+        if not write_only:
+            worksheet.cell(row=worksheet.max_row, column=3).number_format = NUMBER_FORMAT
+            worksheet.cell(row=worksheet.max_row, column=4).number_format = NUMBER_FORMAT
 
 
-def _finalize_data_sheet(worksheet: Worksheet) -> None:
+def _finalize_data_sheet(worksheet: Worksheet, row_count: int | None = None) -> None:
     widths = (20, 10, 14, 16, 12, 12, 12, 12, 14, 16, 14, 24)
     for column, width in enumerate(widths, start=1):
         worksheet.column_dimensions[get_column_letter(column)].width = width
     worksheet.freeze_panes = "A2"
-    worksheet.auto_filter.ref = worksheet.dimensions
+    worksheet.auto_filter.ref = _worksheet_range(
+        column_count=len(widths),
+        row_count=row_count or worksheet.max_row,
+    )
+
+
+def _finalize_threshold_sheet(worksheet: Worksheet, row_count: int) -> None:
+    worksheet.freeze_panes = "A2"
+    worksheet.auto_filter.ref = _worksheet_range(column_count=4, row_count=row_count)
+    for column, width in enumerate((16, 12, 12, 12), start=1):
+        worksheet.column_dimensions[get_column_letter(column)].width = width
+
+
+def _worksheet_range(*, column_count: int, row_count: int) -> str:
+    return f"A1:{get_column_letter(column_count)}{max(1, row_count)}"
 
 
 def _apply_row_formats(worksheet: Worksheet, row_number: int) -> None:
@@ -244,15 +283,28 @@ def _scenario_assignments(
     config: SimulationConfig,
     rng: np.random.Generator,
 ) -> dict[int, str]:
+    requested_counts = tuple(
+        _ratio_count(ratio, series_count)
+        for ratio in (
+            config.accident_ratio,
+            config.warning_ratio,
+            config.rapid_growth_ratio,
+        )
+    )
+    if sum(requested_counts) > series_count:
+        raise ValueError(
+            "scenario ratios overallocate available series; reduce warning_ratio, "
+            "accident_ratio, or rapid_growth_ratio"
+        )
+
     shuffled = list(rng.permutation(series_count))
     assignments: dict[int, str] = {}
     cursor = 0
-    for scenario, ratio in (
-        ("accident", config.accident_ratio),
-        ("warning", config.warning_ratio),
-        ("rapid", config.rapid_growth_ratio),
+    for scenario, count in (
+        ("accident", requested_counts[0]),
+        ("warning", requested_counts[1]),
+        ("rapid", requested_counts[2]),
     ):
-        count = min(_ratio_count(ratio, series_count), series_count - cursor)
         for series_index in shuffled[cursor : cursor + count]:
             assignments[int(series_index)] = scenario
         cursor += count
@@ -295,23 +347,44 @@ def _rapid_growth_value(warning: float, time_index: int, sample_count: int) -> f
         return warning * 0.35
     if time_index == sample_count - 1:
         return warning * 0.85
-    return warning * (0.30 + 0.01 * time_index)
+
+    trend_steps = max(1, sample_count - 2)
+    progress = min(time_index, trend_steps) / trend_steps
+    return warning * (0.30 + 0.15 * progress)
 
 
 def _validate_config(config: SimulationConfig) -> None:
+    if not isinstance(config.start, datetime):
+        raise ValueError("start must be a datetime")
+    if not isinstance(config.end, datetime):
+        raise ValueError("end must be a datetime")
     if config.start > config.end:
         raise ValueError("start must be before or equal to end")
-    if config.sampling_hours <= 0:
-        raise ValueError("sampling_hours must be positive")
-    if config.event_duration <= 0:
-        raise ValueError("event_duration must be positive")
+    if (
+        not isinstance(config.sampling_hours, int)
+        or isinstance(config.sampling_hours, bool)
+        or config.sampling_hours <= 0
+    ):
+        raise ValueError("sampling_hours must be a positive integer")
+    if (
+        not isinstance(config.event_duration, int)
+        or isinstance(config.event_duration, bool)
+        or config.event_duration <= 0
+    ):
+        raise ValueError("event_duration must be a positive integer")
     for name, ratio in (
         ("warning_ratio", config.warning_ratio),
         ("accident_ratio", config.accident_ratio),
         ("rapid_growth_ratio", config.rapid_growth_ratio),
     ):
-        if not isfinite(ratio) or ratio < 0 or ratio > 1:
-            raise ValueError(f"{name} must be between 0 and 1")
+        if (
+            not isinstance(ratio, Real)
+            or isinstance(ratio, bool)
+            or not isfinite(float(ratio))
+            or ratio < 0
+            or ratio > 1
+        ):
+            raise ValueError(f"{name} must be a finite number between 0 and 1")
 
     if not config.monitor_types:
         raise ValueError("monitor_types must not be empty")

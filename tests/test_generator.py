@@ -6,7 +6,9 @@ from io import BytesIO
 
 import pytest
 from openpyxl import load_workbook
+from openpyxl import Workbook as OpenpyxlWorkbook
 
+from irradiation_analysis import generator as generator_module
 from irradiation_analysis.analytics import find_growth_signals
 from irradiation_analysis.excel_io import (
     OPTIONAL_COLUMNS,
@@ -141,6 +143,74 @@ def test_simulation_includes_requested_statuses_and_consistent_thresholds():
     assert find_growth_signals(result.records)
 
 
+def test_long_range_rapid_growth_simulation_triggers_growth_signals():
+    config = SimulationConfig(
+        start=datetime(2026, 1, 1),
+        end=datetime(2026, 3, 5),
+        sampling_hours=24,
+        monitor_types=(MonitorTypeConfig("dose-rate", "uSv/h", 10.0, 20.0),),
+        warning_ratio=0,
+        accident_ratio=0,
+        rapid_growth_ratio=1.0,
+        event_duration=3,
+        seed=20260616,
+    )
+
+    result = import_workbooks(generate_simulated_workbooks(config))
+    signals = find_growth_signals(result.records)
+
+    assert result.summary.blocked_rows == 0
+    assert result.summary.valid_rows == 64 * len(all_device_ids())
+    assert signals
+    assert all(signal.latest_value > signal.previous_value for signal in signals)
+
+
+def test_overallocated_scenario_ratios_raise_clear_error():
+    config = SimulationConfig(
+        start=datetime(2026, 6, 1),
+        end=datetime(2026, 6, 1),
+        warning_ratio=0.8,
+        accident_ratio=0.8,
+        rapid_growth_ratio=0.8,
+        seed=123,
+    )
+
+    with pytest.raises(ValueError, match="scenario ratios"):
+        generate_simulated_workbooks(config)
+
+
+@pytest.mark.filterwarnings("error")
+def test_monthly_simulation_uses_streaming_workbook_and_remains_importable(
+    monkeypatch,
+):
+    workbook_calls: list[dict[str, object]] = []
+
+    def workbook_spy(*args, **kwargs):
+        workbook_calls.append(dict(kwargs))
+        return OpenpyxlWorkbook(*args, **kwargs)
+
+    monkeypatch.setattr(generator_module, "Workbook", workbook_spy)
+    config = SimulationConfig(
+        start=datetime(2026, 6, 1),
+        end=datetime(2026, 7, 1),
+        sampling_hours=24,
+        warning_ratio=0.05,
+        accident_ratio=0.03,
+        rapid_growth_ratio=0.04,
+        event_duration=3,
+        seed=20260616,
+    )
+
+    workbooks = generate_simulated_workbooks(config)
+    result = import_workbooks(workbooks)
+
+    assert workbook_calls[0].get("write_only") is True
+    assert len(workbooks) == 1
+    assert result.summary.blocked_rows == 0
+    assert result.summary.valid_rows == 31 * len(all_device_ids()) * len(DEFAULT_MONITOR_TYPES)
+    assert find_growth_signals(result.records)
+
+
 def test_unknown_output_mode_raises_clear_error():
     config = SimulationConfig(
         start=datetime(2026, 6, 1),
@@ -149,4 +219,26 @@ def test_unknown_output_mode_raises_clear_error():
     )
 
     with pytest.raises(ValueError, match="output_mode"):
+        generate_simulated_workbooks(config)
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "message"),
+    [
+        ("start", "2026-06-01", "start must be a datetime"),
+        ("end", "2026-06-01", "end must be a datetime"),
+        ("sampling_hours", 1.5, "sampling_hours must be a positive integer"),
+        ("event_duration", 2.5, "event_duration must be a positive integer"),
+        ("warning_ratio", "0.5", "warning_ratio must be a finite number"),
+    ],
+)
+def test_invalid_config_types_raise_clear_errors(field, value, message):
+    kwargs = {
+        "start": datetime(2026, 6, 1),
+        "end": datetime(2026, 6, 1),
+    }
+    kwargs[field] = value
+    config = SimulationConfig(**kwargs)
+
+    with pytest.raises(ValueError, match=message):
         generate_simulated_workbooks(config)
