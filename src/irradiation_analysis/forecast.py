@@ -30,6 +30,7 @@ _HORIZON_DAYS = {
 }
 
 _CANDIDATES: tuple[tuple[str, Predictor], ...] = (
+    ("最近值", lambda records, target_elapsed: _predict_last_value(records, target_elapsed)),
     ("线性趋势", lambda records, target_elapsed: _predict_linear_trend(records, target_elapsed)),
     ("指数平滑", lambda records, target_elapsed: _predict_exponential_smoothing(records)),
     ("移动平均", lambda records, target_elapsed: _predict_moving_average(records)),
@@ -321,9 +322,10 @@ def _confidence(error: float, records: list[MonitoringRecord]) -> str:
 
 def _candidate_order(method: str) -> int:
     return {
-        "线性趋势": 0,
-        "指数平滑": 1,
-        "移动平均": 2,
+        "最近值": 0,
+        "线性趋势": 1,
+        "指数平滑": 2,
+        "移动平均": 3,
     }[method]
 
 

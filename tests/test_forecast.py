@@ -51,6 +51,20 @@ def test_less_than_three_points_uses_last_value():
     assert forecast.explanation
 
 
+def test_three_or_more_points_can_select_last_value_candidate():
+    records = [
+        record(datetime(2026, 6, 1), 0.0, import_order=1),
+        record(datetime(2026, 6, 2), 10.0, import_order=2),
+        record(datetime(2026, 6, 3), 10.0, import_order=3),
+        record(datetime(2026, 6, 4), 10.0, import_order=4),
+    ]
+
+    forecast = forecast_series(records, ForecastHorizon.NEXT_RECORD)
+
+    assert forecast.method == "最近值"
+    assert forecast.predicted_value == 10.0
+
+
 def test_irregular_sampling_uses_elapsed_time():
     records = [
         record(datetime(2026, 6, 1), 3.0, import_order=1),
