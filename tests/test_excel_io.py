@@ -397,7 +397,7 @@ def test_summary_counts_raw_valid_blocked_entities_and_sorted_types():
             row(
                 room_id="R02",
                 device_id="R02-D02",
-                monitor_type="表面污染",
+                monitor_type="中子剂量率",
             ),
             row(
                 room_id="R01",
@@ -433,7 +433,7 @@ def test_summary_counts_raw_valid_blocked_entities_and_sorted_types():
     assert result.summary.blocked_rows == 1
     assert result.summary.room_count == 2
     assert result.summary.device_count == 2
-    assert result.summary.monitor_types == ("γ剂量率", "表面污染")
+    assert result.summary.monitor_types == ("γ剂量率", "中子剂量率")
 
 
 def test_corrupt_workbook_reports_read_error_instead_of_raising():
