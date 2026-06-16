@@ -30,6 +30,15 @@ REQUIRED_SHEETS = [
     "数据质量问题",
 ]
 
+TABLE_SHEETS = [
+    "异常事件",
+    "设备风险排名",
+    "房间风险排名",
+    "趋势预测",
+    "清洗后的监测数据",
+    "数据质量问题",
+]
+
 
 def record(
     monitored_at: datetime,
@@ -124,12 +133,12 @@ def report_input() -> AnalysisReportInput:
         monitor_type="γ剂量率",
         unit="μSv/h",
         started_at=datetime(2026, 6, 3, 8),
-        ended_at=None,
+        ended_at=datetime(2026, 6, 4, 8),
         highest_status=MonitoringStatus.ACCIDENT,
         peak_value=22.0,
         peak_time=datetime(2026, 6, 3, 8),
         record_count=1,
-        duration_days=0.0,
+        duration_days=1.0,
         source_records=(accident,),
         reasons=("最高状态为事故级",),
     )
@@ -153,7 +162,7 @@ def report_input() -> AnalysisReportInput:
         device_count=2,
         abnormal_device_count=1,
         event_count=1,
-        longest_event_duration_days=0.0,
+        longest_event_duration_days=1.0,
         reasons=("max_device_score=66.5",),
     )
     series_forecast = SeriesForecast(
@@ -216,6 +225,20 @@ def assert_fill_suffix(cell, suffix: str) -> None:
     assert cell.fill.fgColor.rgb.upper().endswith(suffix)
 
 
+def assert_column_format(worksheet, header: str, number_format: str) -> None:
+    column = column_for_header(worksheet, header)
+    assert worksheet.cell(row=2, column=column).number_format == number_format
+
+
+def summary_pairs(worksheet) -> dict[str, object]:
+    pairs = {}
+    for row in worksheet.iter_rows(values_only=True):
+        for label, value in ((row[0], row[1]), (row[2], row[3])):
+            if label:
+                pairs[label] = value
+    return pairs
+
+
 def test_analysis_report_contains_all_required_sheets():
     workbook = workbook_from_report()
 
@@ -224,20 +247,90 @@ def test_analysis_report_contains_all_required_sheets():
     workbook.close()
 
 
-def test_report_formats_status_and_freezes_headers():
+def test_report_formats_tables_statuses_and_data_columns():
     workbook = workbook_from_report()
 
     events_sheet = workbook["异常事件"]
+    device_risk_sheet = workbook["设备风险排名"]
+    room_risk_sheet = workbook["房间风险排名"]
+    forecast_sheet = workbook["趋势预测"]
     cleaned_sheet = workbook["清洗后的监测数据"]
-    risk_sheet = workbook["设备风险排名"]
 
-    assert events_sheet.freeze_panes == "A2"
-    assert cleaned_sheet.auto_filter.ref is not None
+    for sheet_name in TABLE_SHEETS:
+        worksheet = workbook[sheet_name]
+        assert worksheet.freeze_panes == "A2"
+        assert worksheet.auto_filter.ref is not None
 
     event_status_column = column_for_header(events_sheet, "最高状态")
-    risk_status_column = column_for_header(risk_sheet, "当前状态")
+    risk_status_column = column_for_header(device_risk_sheet, "当前状态")
+    forecast_status_column = column_for_header(forecast_sheet, "预测状态")
     assert_fill_suffix(events_sheet.cell(row=2, column=event_status_column), "DC2626")
-    assert_fill_suffix(risk_sheet.cell(row=2, column=risk_status_column), "F59E0B")
+    assert_fill_suffix(device_risk_sheet.cell(row=2, column=risk_status_column), "F59E0B")
+    assert_fill_suffix(forecast_sheet.cell(row=2, column=forecast_status_column), "F59E0B")
+
+    for header in ("开始时间", "结束时间", "峰值时间"):
+        assert_column_format(events_sheet, header, "yyyy-mm-dd hh:mm")
+    for header in ("预测时间", "训练开始", "训练结束"):
+        assert_column_format(forecast_sheet, header, "yyyy-mm-dd hh:mm")
+    assert_column_format(cleaned_sheet, "监测时间", "yyyy-mm-dd hh:mm")
+
+    for header in ("峰值", "持续天数"):
+        assert_column_format(events_sheet, header, "0.000")
+    for header in ("风险评分", "严重度分", "超限分", "持续分", "趋势分", "复发分"):
+        assert_column_format(device_risk_sheet, header, "0.000")
+    for header in ("风险评分", "最高设备评分", "持续分", "最长事件持续天数"):
+        assert_column_format(room_risk_sheet, header, "0.000")
+    assert_column_format(room_risk_sheet, "异常设备比例", "0.00%")
+    for header in ("预测值", "预警值", "控制标准"):
+        assert_column_format(forecast_sheet, header, "0.000")
+    for header in ("监测值", "预警值", "控制标准"):
+        assert_column_format(cleaned_sheet, header, "0.000")
+
+    workbook.close()
+
+
+def test_summary_sheet_includes_required_high_level_content():
+    workbook = workbook_from_report()
+
+    pairs = summary_pairs(workbook["分析摘要"])
+    values = [
+        value
+        for row in workbook["分析摘要"].iter_rows(values_only=True)
+        for value in row
+        if value is not None
+    ]
+
+    assert pairs["导入文件数"] == 1
+    assert pairs["原始行数"] == 4
+    assert pairs["有效行数"] == 3
+    assert pairs["阻断行数"] == 1
+    assert pairs["完全重复行数"] == 0
+    assert pairs["冲突键数"] == 0
+    assert pairs["房间数"] == 1
+    assert pairs["设备数"] == 2
+    assert pairs["监测类型"] == "γ剂量率"
+
+    assert pairs["设备正常数"] == 0
+    assert pairs["设备预警数"] == 1
+    assert pairs["设备事故级数"] == 1
+    assert pairs["设备无数据数"] == 0
+    assert pairs["房间正常数"] == 0
+    assert pairs["房间预警数"] == 0
+    assert pairs["房间事故级数"] == 1
+    assert pairs["房间无数据数"] == 0
+
+    assert pairs["异常事件数"] == 1
+    assert pairs["设备风险条目数"] == 1
+    assert pairs["房间风险条目数"] == 1
+    assert pairs["最高设备风险"] == "R01-D01（66.5）"
+    assert pairs["最高房间风险"] == "R01（78.0）"
+    assert pairs["预测序列数"] == 1
+    assert pairs["预测正常设备数"] == 0
+    assert pairs["预测预警设备数"] == 1
+    assert pairs["预测事故级设备数"] == 1
+    assert pairs["预测无数据设备数"] == 198
+    assert pairs["系统预测摘要"] == "forecasted_series=1"
+    assert any("预测结果仅供趋势研判参考" in str(value) for value in values)
 
     workbook.close()
 
