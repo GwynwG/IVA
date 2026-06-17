@@ -10,6 +10,7 @@ from irradiation_analysis.analytics import (
     find_near_threshold,
     rank_device_risks,
     rank_room_risks,
+    risk_component_breakdown,
 )
 from irradiation_analysis.excel_io import ImportResult
 from irradiation_analysis.forecast import ForecastHorizon, forecast_system
@@ -18,6 +19,7 @@ from irradiation_analysis.models import (
     MonitoringRecord,
     RiskResult,
     RoomRiskResult,
+    RiskComponent,
     WarningAlert,
 )
 from irradiation_analysis.ui.styles import (
@@ -44,6 +46,7 @@ def render_intelligence_page() -> None:
 
     _render_alerts(alerts)
     _render_rankings(device_risks, room_risks)
+    _render_risk_components(device_risks)
     _render_attention_lists(growth_signals, near_warning)
     _render_forecasts(records)
 
@@ -124,6 +127,44 @@ def _render_rankings(
             use_container_width=True,
             hide_index=True,
         )
+
+
+def _render_risk_components(device_risks: list[RiskResult]) -> None:
+    st.subheader("风险构成")
+    if not device_risks:
+        st.info("暂无设备风险构成。")
+        return
+
+    selected_risks = device_risks[:10]
+    rows = [
+        _risk_component_row(component)
+        for component in risk_component_breakdown(selected_risks)
+        if component.contribution > 0
+    ]
+    if not rows:
+        st.caption("Top 设备暂无非零风险贡献。")
+        return
+
+    frame = pd.DataFrame(rows)
+    st.plotly_chart(
+        px.bar(
+            frame,
+            x="贡献分",
+            y="设备",
+            color="组件",
+            orientation="h",
+            text="贡献分",
+        ).update_layout(
+            barmode="stack",
+            margin=dict(l=10, r=10, t=20, b=10),
+            xaxis_title="加权贡献分",
+            yaxis_title="设备",
+            yaxis=dict(categoryorder="total ascending"),
+            legend_title_text="风险组件",
+        ),
+        use_container_width=True,
+    )
+    st.dataframe(frame, use_container_width=True, hide_index=True)
 
 
 def _render_attention_lists(
@@ -280,4 +321,15 @@ def _alert_row(alert: WarningAlert) -> dict[str, object]:
         "规则": alert.rule_code,
         "证据": alert.evidence,
         "建议动作": alert.recommended_action,
+    }
+
+
+def _risk_component_row(component: RiskComponent) -> dict[str, object]:
+    return {
+        "房间": component.room_id,
+        "设备": component.device_id,
+        "组件": component.label,
+        "原始分": component.raw_score,
+        "权重": f"{component.weight:.0%}",
+        "贡献分": component.contribution,
     }

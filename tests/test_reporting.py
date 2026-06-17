@@ -26,6 +26,7 @@ REQUIRED_SHEETS = [
     "智能预警",
     "异常事件",
     "设备风险排名",
+    "风险构成明细",
     "房间风险排名",
     "趋势预测",
     "清洗后的监测数据",
@@ -36,6 +37,7 @@ TABLE_SHEETS = [
     "智能预警",
     "异常事件",
     "设备风险排名",
+    "风险构成明细",
     "房间风险排名",
     "趋势预测",
     "清洗后的监测数据",
@@ -278,6 +280,7 @@ def test_report_formats_tables_statuses_and_data_columns():
     events_sheet = workbook["异常事件"]
     alerts_sheet = workbook["智能预警"]
     device_risk_sheet = workbook["设备风险排名"]
+    risk_components_sheet = workbook["风险构成明细"]
     room_risk_sheet = workbook["房间风险排名"]
     forecast_sheet = workbook["趋势预测"]
     cleaned_sheet = workbook["清洗后的监测数据"]
@@ -308,6 +311,9 @@ def test_report_formats_tables_statuses_and_data_columns():
         assert_column_format(events_sheet, header, "0.000")
     for header in ("风险评分", "严重度分", "超限分", "持续分", "趋势分", "复发分"):
         assert_column_format(device_risk_sheet, header, "0.000")
+    for header in ("原始分", "贡献分"):
+        assert_column_format(risk_components_sheet, header, "0.000")
+    assert_column_format(risk_components_sheet, "权重", "0.00%")
     for header in ("风险评分", "最高设备评分", "持续分", "最长事件持续天数"):
         assert_column_format(room_risk_sheet, header, "0.000")
     assert_column_format(room_risk_sheet, "异常设备比例", "0.00%")
@@ -378,6 +384,8 @@ def test_report_includes_source_fields_forecast_context_and_quality_details():
     alert_headers = [cell.value for cell in alert_sheet[1]]
     forecast_sheet = workbook["趋势预测"]
     forecast_headers = [cell.value for cell in forecast_sheet[1]]
+    risk_components_sheet = workbook["风险构成明细"]
+    risk_component_headers = [cell.value for cell in risk_components_sheet[1]]
     quality_sheet = workbook["数据质量问题"]
     quality_headers = [cell.value for cell in quality_sheet[8]]
     forecast_values = [
@@ -392,6 +400,12 @@ def test_report_includes_source_fields_forecast_context_and_quality_details():
         for value in row
         if value is not None
     ]
+    risk_component_values = [
+        value
+        for row in risk_components_sheet.iter_rows(values_only=True)
+        for value in row
+        if value is not None
+    ]
     quality_values = [
         value
         for row in quality_sheet.iter_rows(values_only=True)
@@ -403,6 +417,9 @@ def test_report_includes_source_fields_forecast_context_and_quality_details():
     assert {"触发规则", "证据", "建议动作"}.issubset(alert_headers)
     assert any("current_warning" in str(value) for value in alert_values)
     assert any("安排复测" in str(value) for value in alert_values)
+    assert {"组件代码", "组件名称", "原始分", "权重", "贡献分"}.issubset(risk_component_headers)
+    assert any("严重度" in str(value) for value in risk_component_values)
+    assert any(value == 24 for value in risk_component_values)
     assert {"预测方法", "样本数", "置信度", "说明"}.issubset(forecast_headers)
     assert any("预测结果仅供趋势研判参考" in str(value) for value in forecast_values)
     assert {"来源文件", "来源工作表", "来源行号", "详情"}.issubset(quality_headers)

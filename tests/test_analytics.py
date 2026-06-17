@@ -8,6 +8,7 @@ from irradiation_analysis.analytics import (
     find_near_threshold,
     rank_device_risks,
     rank_room_risks,
+    risk_component_breakdown,
 )
 from irradiation_analysis.models import MonitoringRecord, MonitoringStatus
 
@@ -169,6 +170,16 @@ def test_risk_score_is_explainable_bounded_and_sorted():
     assert results[0].status is MonitoringStatus.ACCIDENT
     assert results[0].reasons
     assert results[0].component_scores["severity"] == 100.0
+
+    components = risk_component_breakdown(results[:1])
+    by_name = {component.component: component for component in components}
+    assert by_name["severity"].label == "严重度"
+    assert by_name["severity"].weight == RISK_WEIGHTS["severity"]
+    assert by_name["severity"].contribution == 40.0
+    assert by_name["exceedance"].contribution == round(
+        results[0].component_scores["exceedance"] * RISK_WEIGHTS["exceedance"],
+        6,
+    )
 
 
 def test_room_risk_aggregates_device_risk_and_abnormal_ratio():

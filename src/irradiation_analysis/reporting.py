@@ -13,6 +13,7 @@ from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.worksheet import Worksheet
 
+from irradiation_analysis.analytics import risk_component_breakdown
 from irradiation_analysis.excel_io import ImportResult
 from irradiation_analysis.models import (
     AbnormalEvent,
@@ -20,6 +21,7 @@ from irradiation_analysis.models import (
     MonitoringRecord,
     MonitoringStatus,
     QualityIssue,
+    RiskComponent,
     RiskResult,
     RoomRiskResult,
     SeriesForecast,
@@ -34,6 +36,7 @@ SHEET_NAMES = (
     "智能预警",
     "异常事件",
     "设备风险排名",
+    "风险构成明细",
     "房间风险排名",
     "趋势预测",
     "清洗后的监测数据",
@@ -84,6 +87,10 @@ def build_analysis_report(report_input: AnalysisReportInput) -> bytes:
     _write_alerts_sheet(worksheets["智能预警"], report_input.warning_alerts)
     _write_events_sheet(worksheets["异常事件"], report_input.events)
     _write_device_risks_sheet(worksheets["设备风险排名"], report_input.device_risks)
+    _write_risk_components_sheet(
+        worksheets["风险构成明细"],
+        risk_component_breakdown(report_input.device_risks),
+    )
     _write_room_risks_sheet(worksheets["房间风险排名"], report_input.room_risks)
     _write_forecasts_sheet(worksheets["趋势预测"], report_input.series_forecasts)
     _write_cleaned_data_sheet(
@@ -375,6 +382,40 @@ def _write_device_risks_sheet(
         len(headers),
         numeric_columns=(4, 9, 10, 11, 12, 13),
         integer_columns=(1, 6, 7, 8),
+    )
+
+
+def _write_risk_components_sheet(
+    worksheet: Worksheet,
+    components: Sequence[RiskComponent],
+) -> None:
+    headers = (
+        "房间ID",
+        "设备ID",
+        "组件代码",
+        "组件名称",
+        "原始分",
+        "权重",
+        "贡献分",
+    )
+    _write_headers(worksheet, headers)
+    for component in components:
+        worksheet.append(
+            (
+                component.room_id,
+                component.device_id,
+                component.component,
+                component.label,
+                component.raw_score,
+                component.weight,
+                component.contribution,
+            )
+        )
+    _finalize_table(
+        worksheet,
+        len(headers),
+        numeric_columns=(5, 7),
+        percent_columns=(6,),
     )
 
 

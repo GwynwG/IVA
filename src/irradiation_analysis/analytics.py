@@ -10,6 +10,7 @@ from irradiation_analysis.models import (
     GrowthSignal,
     MonitoringRecord,
     MonitoringStatus,
+    RiskComponent,
     RiskResult,
     RoomRiskResult,
 )
@@ -25,6 +26,13 @@ RISK_WEIGHTS = {
     "duration": 0.15,
     "trend": 0.10,
     "recurrence": 0.10,
+}
+RISK_COMPONENT_LABELS = {
+    "severity": "严重度",
+    "exceedance": "超阈幅度",
+    "duration": "持续时间",
+    "trend": "增长趋势",
+    "recurrence": "复发情况",
 }
 
 SeriesKey = tuple[str, str, str]
@@ -233,6 +241,33 @@ def rank_room_risks(
         )
 
     return sorted(results, key=lambda result: (-result.score, result.room_id))
+
+
+def risk_component_breakdown(risks: Iterable[RiskResult]) -> list[RiskComponent]:
+    components: list[RiskComponent] = []
+    for risk in risks:
+        for component, weight in RISK_WEIGHTS.items():
+            raw_score = risk.component_scores.get(component, 0.0)
+            contribution = round(raw_score * weight, 6)
+            components.append(
+                RiskComponent(
+                    room_id=risk.room_id,
+                    device_id=risk.device_id,
+                    component=component,
+                    label=RISK_COMPONENT_LABELS[component],
+                    raw_score=raw_score,
+                    weight=weight,
+                    contribution=contribution,
+                )
+            )
+    return sorted(
+        components,
+        key=lambda item: (
+            item.device_id,
+            -item.contribution,
+            item.component,
+        ),
+    )
 
 
 def _build_event(

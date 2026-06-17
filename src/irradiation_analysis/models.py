@@ -178,6 +178,17 @@ class RiskResult:
 
 
 @dataclass(frozen=True)
+class RiskComponent:
+    room_id: str
+    device_id: str
+    component: str
+    label: str
+    raw_score: float
+    weight: float
+    contribution: float
+
+
+@dataclass(frozen=True)
 class RoomRiskResult:
     room_id: str
     score: float
