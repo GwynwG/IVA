@@ -10,7 +10,7 @@ from irradiation_analysis.models import MonitoringStatus
 
 
 APP_TITLE = "辐照监测可视化与智能化分析系统"
-STAGE_LABELS = ("数据导入", "空间总览", "趋势分析", "智能研判", "报告生成")
+STAGE_LABELS = ("数据导入", "空间总览", "趋势分析", "智能研判")
 EXCEL_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 FORECAST_DISCLAIMER = (
     "预测结果仅供趋势研判参考，不替代现场复核、仪器校准或安全处置决策。"
@@ -39,21 +39,23 @@ def inject_styles() -> None:
             margin: 0.75rem 0 1.25rem;
         }
         .stage-card {
+            position: relative;
             flex: 1 1 10rem;
-            border: 1px solid #bfdbfe;
-            border-radius: 1rem;
-            background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);
+            border: 1px solid #cbd5e1;
+            border-left: 4px solid #0f766e;
+            border-radius: 0.5rem;
+            background: #f8fafc;
             padding: 0.85rem 1rem;
             color: #0f172a;
-            box-shadow: 0 10px 24px rgba(37, 99, 235, 0.08);
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
         }
         .stage-card strong {
-            color: #1d4ed8;
+            color: #b45309;
         }
         .soft-panel {
-            border: 1px solid #dbeafe;
-            border-radius: 1rem;
-            background: #f8fbff;
+            border: 1px solid #cbd5e1;
+            border-radius: 0.5rem;
+            background: #f8fafc;
             padding: 1rem;
         }
         </style>

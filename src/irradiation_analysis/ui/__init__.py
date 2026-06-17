@@ -7,7 +7,6 @@ import streamlit as st
 from irradiation_analysis.ui.import_page import render_import_page
 from irradiation_analysis.ui.intelligence_page import render_intelligence_page
 from irradiation_analysis.ui.overview_page import render_overview_page
-from irradiation_analysis.ui.reports_page import render_reports_page
 from irradiation_analysis.ui.styles import APP_TITLE, STAGE_LABELS, inject_styles, render_stage_rail
 from irradiation_analysis.ui.trends_page import render_trends_page
 
@@ -27,7 +26,7 @@ def run_app() -> None:
     inject_styles()
 
     st.title(APP_TITLE)
-    st.caption("面向辐照监测数据接入、空间态势、趋势研判、智能预测与报告生成的一体化工作台。")
+    st.caption("面向辐照监测数据接入、空间态势、趋势研判与智能预测的分析工作台。")
     render_stage_rail()
 
     tabs = st.tabs(list(STAGE_LABELS))
@@ -39,8 +38,6 @@ def run_app() -> None:
         render_trends_page()
     with tabs[3]:
         render_intelligence_page()
-    with tabs[4]:
-        render_reports_page()
 
 
 def _ensure_session_state() -> None:
