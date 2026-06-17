@@ -1,3 +1,9 @@
-/污染普查数据生成器_100个报告
-/污染普查数据生成器/生成报告
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.codegraph/
+.superpowers/
+generated/
+*.xlsx
+*.zip
 *.pptx

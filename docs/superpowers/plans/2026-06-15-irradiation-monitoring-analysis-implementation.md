@@ -16,6 +16,7 @@ Create:
 
 ```text
 pytest.ini
+pyproject.toml
 src/irradiation_analysis/__init__.py
 src/irradiation_analysis/models.py
 src/irradiation_analysis/validation.py
@@ -72,7 +73,9 @@ The legacy DOCX output files are not runtime dependencies. Remove them only in t
 
 **Files:**
 - Create: `pytest.ini`
+- Create: `pyproject.toml`
 - Create: `src/irradiation_analysis/__init__.py`
+- Create: `src/irradiation_analysis/models.py`
 - Modify: `requirements.txt`
 - Create: `tests/test_models_status.py`
 
@@ -84,6 +87,7 @@ from irradiation_analysis.models import MonitoringStatus
 
 
 def test_monitoring_status_severity_order():
+    assert MonitoringStatus.NO_DATA.severity < MonitoringStatus.NORMAL.severity
     assert MonitoringStatus.NORMAL.severity < MonitoringStatus.WARNING.severity
     assert MonitoringStatus.WARNING.severity < MonitoringStatus.ACCIDENT.severity
 ```
@@ -107,14 +111,36 @@ pythonpath = src
 testpaths = tests
 ```
 
+```toml
+# pyproject.toml
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "irradiation-analysis"
+version = "0.1.0"
+requires-python = ">=3.11"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+```
+
 ```text
 # requirements.txt
+-e .
 streamlit==1.39.0
 pandas==2.2.3
 numpy==2.2.6
 openpyxl==3.1.5
 plotly==5.24.1
+matplotlib==3.9.2
+python-docx==1.1.2
+pypdf==5.1.0
+pillow==10.4.0
 ```
+
+Keep the legacy app dependencies (`matplotlib`, `python-docx`, `pypdf`, and `pillow`) during the migration. Remove them only after the legacy UI and DOCX workflow are replaced in Tasks 10 and 11.
 
 ```python
 # src/irradiation_analysis/__init__.py
@@ -144,20 +170,32 @@ class MonitoringStatus(str, Enum):
         }[self]
 ```
 
-- [ ] **Step 5: Run the focused test**
+- [ ] **Step 5: Install the project and verify normal Python imports**
+
+Run:
+
+```powershell
+python -m pip install -r requirements.txt
+python -c "import irradiation_analysis; print(irradiation_analysis.__name__)"
+```
+
+Expected: the editable package installs and the import command prints `irradiation_analysis`.
+
+- [ ] **Step 6: Run focused and full tests**
 
 Run:
 
 ```powershell
 python -m pytest tests/test_models_status.py -v
+python -m pytest -q
 ```
 
-Expected: `1 passed`.
+Expected: the focused test passes and the full legacy-plus-package suite passes.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```powershell
-git add pytest.ini requirements.txt src/irradiation_analysis tests/test_models_status.py
+git add pytest.ini pyproject.toml requirements.txt src/irradiation_analysis tests/test_models_status.py
 git commit -m "chore: establish irradiation analysis package"
 ```
 
@@ -1244,6 +1282,7 @@ git commit -m "feat: replace legacy UI with monitoring workbench"
 - Modify: `README.md`
 - Modify: `USER_MANUAL_CN.md`
 - Modify: `.gitignore`
+- Modify: `requirements.txt`
 - Remove: `tests/test_extract.py`
 - Remove: `tests/test_parse.py`
 - Remove: `污染普查数据生成器/`
@@ -1293,7 +1332,22 @@ Remove-Item -LiteralPath '.\污染普查数据生成器' -Recurse -Force
 Remove-Item -LiteralPath '.\污染普查数据生成器_100个报告' -Recurse -Force
 ```
 
-- [ ] **Step 5: Run the full test suite**
+- [ ] **Step 5: Remove migration-only dependencies**
+
+After Task 10 has replaced the legacy app and the legacy tests and DOCX generators above are removed, reduce `requirements.txt` to the new system dependencies:
+
+```text
+-e .
+streamlit==1.39.0
+pandas==2.2.3
+numpy==2.2.6
+openpyxl==3.1.5
+plotly==5.24.1
+```
+
+This final requirements cleanup removes `matplotlib`, `python-docx`, `pypdf`, and `pillow`.
+
+- [ ] **Step 6: Run the full test suite**
 
 Run:
 
@@ -1303,10 +1357,10 @@ python -m pytest -q
 
 Expected: all new tests pass and no legacy imports remain.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```powershell
-git add README.md USER_MANUAL_CN.md .gitignore tests
+git add README.md USER_MANUAL_CN.md .gitignore requirements.txt tests
 git add -u
 git commit -m "docs: complete Excel monitoring migration"
 ```
