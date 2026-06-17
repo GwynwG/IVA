@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from irradiation_analysis.alerts import build_warning_alerts
 from irradiation_analysis.analytics import build_abnormal_events, rank_device_risks, rank_room_risks
 from irradiation_analysis.excel_io import ImportResult
 from irradiation_analysis.forecast import ForecastHorizon, forecast_system
@@ -21,6 +22,7 @@ def build_analysis_report_from_import_result(
     device_risks = rank_device_risks(records)
     room_risks = rank_room_risks(records, device_risks)
     system_forecast = forecast_system(records, horizon)
+    warning_alerts = build_warning_alerts(records, horizon)
     report_input = AnalysisReportInput(
         import_result=result,
         snapshot=snapshot,
@@ -29,5 +31,6 @@ def build_analysis_report_from_import_result(
         room_risks=room_risks,
         series_forecasts=system_forecast.series_forecasts,
         system_forecast=system_forecast,
+        warning_alerts=warning_alerts,
     )
     return build_analysis_report(report_input)

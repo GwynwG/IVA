@@ -16,12 +16,14 @@ from irradiation_analysis.models import (
     RoomRiskResult,
     SeriesForecast,
     SystemForecast,
+    WarningAlert,
 )
 from irradiation_analysis.reporting import AnalysisReportInput, build_analysis_report
 
 
 REQUIRED_SHEETS = [
     "分析摘要",
+    "智能预警",
     "异常事件",
     "设备风险排名",
     "房间风险排名",
@@ -31,6 +33,7 @@ REQUIRED_SHEETS = [
 ]
 
 TABLE_SHEETS = [
+    "智能预警",
     "异常事件",
     "设备风险排名",
     "房间风险排名",
@@ -197,6 +200,21 @@ def report_input() -> AnalysisReportInput:
         summary="forecasted_series=1",
         reasons=("预测不替代现场复核",),
     )
+    warning_alert = WarningAlert(
+        room_id="R01",
+        device_id="R01-D01",
+        monitor_type="γ剂量率",
+        unit="μSv/h",
+        rule_code="current_warning",
+        level="预警",
+        score=82.0,
+        triggered_at=datetime(2026, 6, 2, 8),
+        current_value=12.0,
+        warning_threshold=10.0,
+        control_threshold=20.0,
+        evidence="当前值 12 已达到或超过预警值 10。",
+        recommended_action="安排复测并确认近期作业、屏蔽和仪器校准状态。",
+    )
     return AnalysisReportInput(
         import_result=import_result,
         snapshot=snapshot,
@@ -206,6 +224,7 @@ def report_input() -> AnalysisReportInput:
         series_forecasts=(series_forecast,),
         system_forecast=system_forecast,
         generated_at=datetime(2026, 6, 16, 9, 30),
+        warning_alerts=(warning_alert,),
     )
 
 
@@ -251,6 +270,7 @@ def test_report_formats_tables_statuses_and_data_columns():
     workbook = workbook_from_report()
 
     events_sheet = workbook["异常事件"]
+    alerts_sheet = workbook["智能预警"]
     device_risk_sheet = workbook["设备风险排名"]
     room_risk_sheet = workbook["房间风险排名"]
     forecast_sheet = workbook["趋势预测"]
@@ -268,12 +288,15 @@ def test_report_formats_tables_statuses_and_data_columns():
     assert_fill_suffix(device_risk_sheet.cell(row=2, column=risk_status_column), "F59E0B")
     assert_fill_suffix(forecast_sheet.cell(row=2, column=forecast_status_column), "F59E0B")
 
+    assert_column_format(alerts_sheet, "触发时间", "yyyy-mm-dd hh:mm")
     for header in ("开始时间", "结束时间", "峰值时间"):
         assert_column_format(events_sheet, header, "yyyy-mm-dd hh:mm")
     for header in ("预测时间", "训练开始", "训练结束"):
         assert_column_format(forecast_sheet, header, "yyyy-mm-dd hh:mm")
     assert_column_format(cleaned_sheet, "监测时间", "yyyy-mm-dd hh:mm")
 
+    for header in ("评分", "当前或预测值", "预警值", "控制标准"):
+        assert_column_format(alerts_sheet, header, "0.000")
     for header in ("峰值", "持续天数"):
         assert_column_format(events_sheet, header, "0.000")
     for header in ("风险评分", "严重度分", "超限分", "持续分", "趋势分", "复发分"):
@@ -324,6 +347,9 @@ def test_summary_sheet_includes_required_high_level_content():
     assert pairs["房间风险条目数"] == 1
     assert pairs["最高设备风险"] == "R01-D01（66.5）"
     assert pairs["最高房间风险"] == "R01（78.0）"
+    assert pairs["智能预警数"] == 1
+    assert pairs["事故级预警数"] == 0
+    assert pairs["预测触发预警数"] == 0
     assert pairs["预测序列数"] == 1
     assert pairs["预测正常设备数"] == 0
     assert pairs["预测预警设备数"] == 1
@@ -339,6 +365,8 @@ def test_report_includes_source_fields_forecast_context_and_quality_details():
     workbook = workbook_from_report()
 
     cleaned_headers = [cell.value for cell in workbook["清洗后的监测数据"][1]]
+    alert_sheet = workbook["智能预警"]
+    alert_headers = [cell.value for cell in alert_sheet[1]]
     forecast_sheet = workbook["趋势预测"]
     forecast_headers = [cell.value for cell in forecast_sheet[1]]
     quality_sheet = workbook["数据质量问题"]
@@ -346,6 +374,12 @@ def test_report_includes_source_fields_forecast_context_and_quality_details():
     forecast_values = [
         value
         for row in forecast_sheet.iter_rows(values_only=True)
+        for value in row
+        if value is not None
+    ]
+    alert_values = [
+        value
+        for row in alert_sheet.iter_rows(values_only=True)
         for value in row
         if value is not None
     ]
@@ -357,6 +391,9 @@ def test_report_includes_source_fields_forecast_context_and_quality_details():
     ]
 
     assert {"来源文件", "来源工作表", "来源行号"}.issubset(cleaned_headers)
+    assert {"触发规则", "证据", "建议动作"}.issubset(alert_headers)
+    assert any("current_warning" in str(value) for value in alert_values)
+    assert any("安排复测" in str(value) for value in alert_values)
     assert {"预测方法", "样本数", "置信度", "说明"}.issubset(forecast_headers)
     assert any("预测结果仅供趋势研判参考" in str(value) for value in forecast_values)
     assert {"来源文件", "来源工作表", "来源行号", "详情"}.issubset(quality_headers)

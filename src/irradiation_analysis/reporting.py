@@ -24,11 +24,13 @@ from irradiation_analysis.models import (
     RoomRiskResult,
     SeriesForecast,
     SystemForecast,
+    WarningAlert,
 )
 
 
 SHEET_NAMES = (
     "分析摘要",
+    "智能预警",
     "异常事件",
     "设备风险排名",
     "房间风险排名",
@@ -66,6 +68,7 @@ class AnalysisReportInput:
     series_forecasts: Sequence[SeriesForecast]
     system_forecast: SystemForecast | None
     generated_at: datetime | None = None
+    warning_alerts: Sequence[WarningAlert] = ()
 
 
 def build_analysis_report(report_input: AnalysisReportInput) -> bytes:
@@ -77,6 +80,7 @@ def build_analysis_report(report_input: AnalysisReportInput) -> bytes:
         worksheets[sheet_name] = workbook.create_sheet(sheet_name)
 
     _write_summary_sheet(worksheets["分析摘要"], report_input)
+    _write_alerts_sheet(worksheets["智能预警"], report_input.warning_alerts)
     _write_events_sheet(worksheets["异常事件"], report_input.events)
     _write_device_risks_sheet(worksheets["设备风险排名"], report_input.device_risks)
     _write_room_risks_sheet(worksheets["房间风险排名"], report_input.room_risks)
@@ -120,6 +124,12 @@ def _write_summary_sheet(
     top_device_risk = _top_risk_label(report_input.device_risks)
     top_room_risk = _top_room_risk_label(report_input.room_risks)
     system_forecast = report_input.system_forecast
+    high_alerts = [alert for alert in report_input.warning_alerts if "事故" in alert.level]
+    forecast_alerts = [
+        alert
+        for alert in report_input.warning_alerts
+        if alert.rule_code == "forecast_threshold"
+    ]
 
     rows: list[tuple[str, object, str, object]] = [
         ("生成时间", generated_at, "快照时间", report_input.snapshot.selected_at),
@@ -161,6 +171,13 @@ def _write_summary_sheet(
         ("异常事件数", len(report_input.events), "设备风险条目数", len(report_input.device_risks)),
         ("房间风险条目数", len(report_input.room_risks), "最高设备风险", top_device_risk),
         ("最高房间风险", top_room_risk, "", ""),
+        (
+            "智能预警数",
+            len(report_input.warning_alerts),
+            "事故级预警数",
+            len(high_alerts),
+        ),
+        ("预测触发预警数", len(forecast_alerts), "", ""),
         ("", "", "", ""),
         ("趋势预测", "", "", ""),
         (
@@ -191,7 +208,7 @@ def _write_summary_sheet(
     for row in worksheet.iter_rows(min_row=1, max_row=worksheet.max_row):
         for cell in row:
             cell.alignment = Alignment(vertical="top", wrap_text=True)
-    for row_index in (4, 11, 17, 22):
+    for row_index in (4, 11, 17, 24):
         for cell in worksheet[row_index]:
             cell.font = Font(bold=True)
             cell.fill = SECTION_FILL
@@ -201,6 +218,52 @@ def _write_summary_sheet(
         worksheet.cell(row=row_index, column=2).number_format = DATETIME_FORMAT
         worksheet.cell(row=row_index, column=4).number_format = DATETIME_FORMAT
     _set_widths(worksheet, (18, 32, 18, 32))
+
+
+def _write_alerts_sheet(
+    worksheet: Worksheet,
+    alerts: Sequence[WarningAlert],
+) -> None:
+    headers = (
+        "级别",
+        "评分",
+        "房间ID",
+        "设备ID",
+        "监测类型",
+        "单位",
+        "触发规则",
+        "触发时间",
+        "当前或预测值",
+        "预警值",
+        "控制标准",
+        "证据",
+        "建议动作",
+    )
+    _write_headers(worksheet, headers)
+    for alert in alerts:
+        worksheet.append(
+            (
+                alert.level,
+                alert.score,
+                alert.room_id,
+                alert.device_id,
+                alert.monitor_type,
+                alert.unit,
+                alert.rule_code,
+                alert.triggered_at,
+                alert.current_value,
+                alert.warning_threshold,
+                alert.control_threshold,
+                alert.evidence,
+                alert.recommended_action,
+            )
+        )
+    _finalize_table(
+        worksheet,
+        len(headers),
+        datetime_columns=(8,),
+        numeric_columns=(2, 9, 10, 11),
+    )
 
 
 def _write_events_sheet(

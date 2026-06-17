@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import pandas as pd
+import plotly.express as px
 import streamlit as st
 
+from irradiation_analysis.alerts import build_warning_alerts
 from irradiation_analysis.analytics import (
     find_growth_signals,
     find_near_threshold,
@@ -11,8 +13,19 @@ from irradiation_analysis.analytics import (
 )
 from irradiation_analysis.excel_io import ImportResult
 from irradiation_analysis.forecast import ForecastHorizon, forecast_system
-from irradiation_analysis.models import GrowthSignal, MonitoringRecord, RiskResult, RoomRiskResult
-from irradiation_analysis.ui.styles import FORECAST_DISCLAIMER, format_datetime, status_label
+from irradiation_analysis.models import (
+    GrowthSignal,
+    MonitoringRecord,
+    RiskResult,
+    RoomRiskResult,
+    WarningAlert,
+)
+from irradiation_analysis.ui.styles import (
+    FORECAST_DISCLAIMER,
+    format_datetime,
+    render_metrics,
+    status_label,
+)
 
 
 def render_intelligence_page() -> None:
@@ -27,7 +40,9 @@ def render_intelligence_page() -> None:
     room_risks = rank_room_risks(records, device_risks)
     growth_signals = find_growth_signals(records)
     near_warning = find_near_threshold(records)
+    alerts = build_warning_alerts(records)
 
+    _render_alerts(alerts)
     _render_rankings(device_risks, room_risks)
     _render_attention_lists(growth_signals, near_warning)
     _render_forecasts(records)
@@ -35,6 +50,58 @@ def render_intelligence_page() -> None:
 
 def _import_result() -> ImportResult | None:
     return st.session_state.get("import_result")
+
+
+def _render_alerts(alerts: list[WarningAlert]) -> None:
+    st.subheader("智能预警")
+    if not alerts:
+        st.success("当前未触发智能预警。")
+        return
+
+    high_alerts = [alert for alert in alerts if "事故" in alert.level]
+    warning_alerts = [
+        alert
+        for alert in alerts
+        if "预警" in alert.level and "事故" not in alert.level
+    ]
+    watch_alerts = [
+        alert
+        for alert in alerts
+        if alert not in high_alerts and alert not in warning_alerts
+    ]
+    render_metrics(
+        [
+            ("事故级预警", len(high_alerts), "当前或预测达到事故级边界的预警"),
+            ("预警级信号", len(warning_alerts), "当前预警、持续预警、趋势预警或预测预警"),
+            ("关注信号", len(watch_alerts), "接近预警等需要观察的信号"),
+            ("最高评分", f"{alerts[0].score:.1f}", "按规则评分排序后的最高预警分"),
+        ]
+    )
+
+    rows = [_alert_row(alert) for alert in alerts[:50]]
+    distribution = (
+        pd.DataFrame(rows)
+        .groupby(["级别", "规则"], as_index=False)
+        .size()
+        .rename(columns={"size": "数量"})
+    )
+    st.plotly_chart(
+        px.bar(
+            distribution,
+            x="级别",
+            y="数量",
+            color="规则",
+            barmode="group",
+            text="数量",
+        ).update_layout(
+            margin=dict(l=10, r=10, t=20, b=10),
+            yaxis_title="预警数量",
+            xaxis_title="预警级别",
+            legend_title_text="触发规则",
+        ),
+        use_container_width=True,
+    )
+    st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
 
 
 def _render_rankings(
@@ -195,4 +262,22 @@ def _near_warning_row(record: MonitoringRecord) -> dict[str, object]:
         "数值": record.value,
         "预警值": record.warning_threshold,
         "占预警值": f"{ratio:.1%}",
+    }
+
+
+def _alert_row(alert: WarningAlert) -> dict[str, object]:
+    return {
+        "级别": alert.level,
+        "评分": alert.score,
+        "房间": alert.room_id,
+        "设备": alert.device_id,
+        "类型": alert.monitor_type,
+        "单位": alert.unit,
+        "触发时间": format_datetime(alert.triggered_at),
+        "当前/预测值": alert.current_value,
+        "预警值": alert.warning_threshold,
+        "控制标准": alert.control_threshold,
+        "规则": alert.rule_code,
+        "证据": alert.evidence,
+        "建议动作": alert.recommended_action,
     }
